@@ -1,0 +1,24 @@
+# THIS FILE IS MANAGED BY PUPPET
+# <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+[DEFAULT]
+logdir = /var/log/cinder
+state_path = /var/lib/cinder
+lock_path = /var/lib/cinder/tmp
+volumes_dir = /etc/cinder/volumes
+iscsi_helper = tgtadm
+sql_connection = mysql://<%= cinder_user %>:<%= cinder_password %>@localhost/cinder
+rpc_backend = cinder.openstack.common.rpc.impl_qpid
+rootwrap_config = /etc/cinder/rootwrap.conf
+volume_driver = cinder.volume.drivers.nfs.NfsDriver
+nfs_shares_config = /etc/cinder/shares.txt
+nfs_mount_point_base = /var/lib/cinder/nfs
+auth_strategy = keystone
+
+[keystone_authtoken]
+auth_host = 127.0.0.1
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = <%= cinder_user %>
+admin_password = <%= cinder_password %>
+signing_dirname = /tmp/keystone-signing-cinder

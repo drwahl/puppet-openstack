@@ -1,0 +1,4 @@
+# THIS FILE IS MANAGED BY PUPPET
+# <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+<% nfs_shares.each do |share| -%>
+<%= share %><% end %>

@@ -1,0 +1,74 @@
+# THIS FILE IS MANAGED BY PUPPET
+# <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+
+[DEFAULT]
+logdir = /var/log/nova
+state_path = /var/lib/nova
+lock_path = /var/lib/nova/tmp
+volumes_dir = /etc/nova/volumes
+dhcpbridge = /usr/bin/nova-dhcpbridge
+dhcpbridge_flagfile = /etc/nova/nova.conf
+force_dhcp_release = True
+injected_network_template = /usr/share/nova/interfaces.template
+libvirt_nonblocking = True
+libvirt_inject_partition = -1
+network_manager = nova.network.manager.FlatDHCPManager
+iscsi_helper = tgtadm
+sql_connection = mysql://<%= nova_user %>:<%= nova_password %>@<%= auth_host %>/nova
+compute_driver = libvirt.LibvirtDriver
+firewall_driver = nova.virt.libvirt.firewall.IptablesFirewallDriver
+rpc_backend = nova.openstack.common.rpc.impl_qpid
+rootwrap_config = /etc/nova/rootwrap.conf
+auth_strategy = keystone
+# General
+verbose = True
+qpid_username=guest
+qpid_password=guest
+
+# Networking
+network_api_class=nova.network.quantumv2.api.API
+quantum_url=http://<%= auth_host %>:9696
+quantum_auth_strategy=keystone
+quantum_admin_tenant_name=service
+quantum_admin_username=<%= quantum_user %>
+quantum_admin_password=<%= quantum_password %>
+quantum_admin_auth_url=http://<%= auth_host %>:35357/v2.0
+libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtHybridOVSBridgeDriver
+linuxnet_interface_driver=nova.network.linux_net.LinuxOVSInterfaceDriver
+
+# Security Groups
+firewall_driver=nova.virt.firewall.NoopFirewallDriver
+security_group_api=quantum
+
+# Metadata
+quantum_metadata_proxy_shared_secret=password
+service_quantum_metadata_proxy=true
+metadata_listen = <%= auth_host %>
+metadata_listen_port = 8775
+
+# Cinder
+volume_api_class=nova.volume.cinder.API
+
+# Glance
+glance_api_servers=<%= auth_host %>:9292
+image_service=nova.image.glance.GlanceImageService
+
+# novnc
+vnc_enabled=true
+vncserver_proxyclient_address=<%= ipaddress %>
+novnc_enable=true
+novncproxy_port=6080
+novncproxy_host=<%= auth_host %>
+novncproxy_base_url=http://<%= auth_host %>:6080/vnc_auto.html
+vncserver_listen=0.0.0.0
+
+
+[keystone_authtoken]
+auth_host = <%= auth_host %>
+auth_port = 35357
+auth_protocol = http
+admin_tenant_name = service
+admin_user = <%= nova_user %>
+admin_password = <%= nova_password %>
+auth_version = v2.0
+signing_dirname = /tmp/keystone-signing-cinder
