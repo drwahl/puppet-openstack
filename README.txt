@@ -44,3 +44,34 @@ Quantum: Virtual network management
 OpenVSwitch is the primary piece of software behind Quantum.  OpenVSwitch is a
 framework to simplifiy automated management of the network layer (VLAN tags,
 routes, etc.).
+
+
+NODE TYPES
+
+There are (logically) 3 main node "types":
+1) Compute Node
+2) Controller Node
+3) Network Node
+
+The "Compute Node" contains a hypervisor (likely KVM) and openstack-nova-compute
+which allows it to communicate with the controller node.  The Compute Nodes are
+where the VMs will run.
+
+The "Controller Node" hosts the OpenStack Nova API services.  Any actions that
+happen within the OpenStack cluster will likely be relayed through this node.
+
+The "Network Node" manages the network stack for OpenStack.  The bring up and
+tear down of VLANs/subnets/routers/load balancers/etc are all managed by the
+Network Node.  For this puppet class, the Network Node will be installed along
+side the Controller Node.  This class assumes this node will have 3 interfaces:
+eth0 - "Administrative" stuff (so you don't lose connectivity when you are
+mucking with bridges)
+eth1 - "private network" communication. eth1 will need to have all the
+OpenStack VLANs bridged to it
+eth2 - "public network" communication.  Traffic to the floating IPs will flow
+out this interface.
+eth0 can have an IP on it directly, but eth1 and eth2 will have bridges created
+for them (by quantum) and an IP needs to be assigned to br-eth1 and br-eth2.
+
+All of these node types can reside on a single server, or they can be seperated
+to allow for higher resiliance.

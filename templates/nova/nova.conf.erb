@@ -12,7 +12,7 @@ force_dhcp_release = True
 injected_network_template = /usr/share/nova/interfaces.template
 libvirt_nonblocking = True
 libvirt_inject_partition = -1
-network_manager = nova.network.manager.FlatDHCPManager
+network_manager = nova.network.manager.VlanManager
 iscsi_helper = tgtadm
 sql_connection = mysql://<%= nova_user %>:<%= nova_password %>@<%= auth_host %>/nova
 compute_driver = libvirt.LibvirtDriver
@@ -20,6 +20,7 @@ firewall_driver = nova.virt.libvirt.firewall.IptablesFirewallDriver
 rpc_backend = nova.openstack.common.rpc.impl_qpid
 rootwrap_config = /etc/nova/rootwrap.conf
 auth_strategy = keystone
+enabled_apis=ec2,osapi_compute,metadata
 # General
 verbose = True
 qpid_username=guest
@@ -58,7 +59,7 @@ vnc_enabled=true
 vncserver_proxyclient_address=<%= ipaddress %>
 novnc_enable=true
 novncproxy_port=6080
-novncproxy_host=<%= auth_host %>
+novncproxy_host=0.0.0.0
 novncproxy_base_url=http://<%= auth_host %>:6080/vnc_auto.html
 vncserver_listen=0.0.0.0
 

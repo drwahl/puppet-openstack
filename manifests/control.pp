@@ -19,30 +19,35 @@
 # class { 'openstack::control': }
 #
 class openstack::control (
-    $enable            = true,
-    $auth_host         = '127.0.0.1',
-    $region            = 'RegionOne',
-    $admin_user        = 'admin',
-    $admin_password    = 'admin',
-    $admin_tenant_name = 'admin',
-    $keystone_db       = 'keystone',
-    $keystone_user     = 'keystone',
-    $keystone_password = 'keystone',
-    $glance_user       = 'glance',
-    $glance_password   = 'glance',
-    $nova_user         = 'nova',
-    $nova_password     = 'nova',
-    $quantum_user      = 'quantum',
-    $quantum_password  = 'quantum',
-    $cinder_user       = 'cinder',
-    $cinder_password   = 'cinder',
-    $ec2_user          = 'ec2',
-    $ec2_password      = 'ec2',
-    $swift_user        = 'swift',
-    $swift_password    = 'swift',
-    $nfs_shares        = ['nfs.example.com:/vm_storage01'],
-    $nfs_shares_path   = '/var/lib/cinder/nfs'
+    $enable                   = true,
+    $auth_host                = '127.0.0.1',
+    $region                   = 'RegionOne',
+    $admin_user               = 'admin',
+    $admin_password           = 'admin',
+    $admin_tenant_name        = 'admin',
+    $keystone_db              = 'keystone',
+    $keystone_user            = 'keystone',
+    $keystone_password        = 'keystone',
+    $glance_user              = 'glance',
+    $glance_password          = 'glance',
+    $nova_user                = 'nova',
+    $nova_password            = 'nova',
+    $quantum_user             = 'quantum',
+    $quantum_password         = 'quantum',
+    $metadata_shared_password = 'password',
+    $cinder_user              = 'cinder',
+    $cinder_password          = 'cinder',
+    $ec2_user                 = 'ec2',
+    $ec2_password             = 'ec2',
+    $swift_user               = 'swift',
+    $swift_password           = 'swift',
+    $nfs_shares               = ['nfs.example.com:/vm_storage01'],
+    $nfs_shares_path          = '/var/lib/cinder/nfs',
+    $int_network_interface    = 'eth1',
+    $ext_network_interface    = 'eth2'
 ){
+
+    class { 'openstack::repo': }
 
     package { 'httpd':
         ensure => present
@@ -80,6 +85,14 @@ class openstack::control (
         content => template('openstack/bashrc.erb'),
         owner   => 'root',
         group   => 'root',
+        mode    => '0644'
+    }
+
+    file { '/opt/.openstack.rc':
+        ensure  => present,
+        content => template('openstack/openstack.rc.erb'),
+        owner   => 'puppet',
+        group   => 'puppet',
         mode    => '0644'
     }
 
@@ -431,6 +444,15 @@ class openstack::control (
     }
 
 #keystone configuration
+    #from https://answers.launchpad.net/keystone/+question/229027
+    cron { 'trim_keystone_tokens':
+        ensure  => present,
+        command => 'mysql -u root keystone -e \'DELETE FROM token WHERE NOT DATE_SUB(CURDATE(),INTERVAL 1 DAY) <= expires;\'',
+        user    => 'root',
+        minute  => 0,
+        hour    => 0,
+    }
+
     package { 'openstack-keystone':
         ensure => present
     }
@@ -648,6 +670,81 @@ class openstack::control (
         ]
     }
 
+    package { 'openvswitch':
+        ensure => present
+    }
+
+    service { 'openvswitch':
+        ensure  => running,
+        enable  => true,
+        require => Package['openvswitch']
+    }
+
+    service { 'quantum-openvswitch-agent':
+        ensure    => running,
+        enable    => true,
+        require   => Package['openstack-quantum'],
+        subscribe => File['/etc/quantum/api-paste.ini']
+    }
+
+    service { 'quantum-dhcp-agent':
+        ensure    => running,
+        enable    => true,
+        require   => Package['openstack-quantum'],
+        subscribe => File['/etc/quantum/dhcp_agent.ini']
+    }
+
+    service { 'quantum-l3-agent':
+        ensure    => running,
+        enable    => true,
+        require   => Package['openstack-quantum'],
+        subscribe => File['/etc/quantum/l3_agent.ini']
+    }
+
+    service { 'quantum-lbaas-agent':
+        ensure    => undef,
+        enable    => true,
+        require   => Package['openstack-quantum'],
+        subscribe => File['/etc/quantum/lbaas_agent.ini']
+    }
+
+    service { 'quantum-metadata-agent':
+        ensure    => running,
+        enable    => true,
+        require   => Package['openstack-quantum'],
+        subscribe => File['/etc/quantum/metadata_agent.ini']
+    }
+
+    file { '/etc/quantum/dhcp_agent.ini':
+        ensure  => present,
+        require => Package['openstack-quantum'],
+        content => template('openstack/quantum/dhcp_agent.ini.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0644',
+        notify  => Service['quantum-dhcp-agent']
+    }
+
+    file { '/etc/quantum/l3_agent.ini':
+        ensure  => present,
+        require => Package['openstack-quantum'],
+        content => template('openstack/quantum/l3_agent.ini.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0644',
+        notify  => Service['quantum-l3-agent']
+    }
+
+    file { '/etc/quantum/lbaas_agent.ini':
+        ensure  => present,
+        require => Package['openstack-quantum'],
+        content => template('openstack/quantum/lbaas_agent.ini.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0644',
+        notify  => Service['quantum-l3-agent']
+    }
+
     file { '/etc/quantum/api-paste.ini':
         ensure  => present,
         require => Package['openstack-quantum'],
@@ -665,6 +762,16 @@ class openstack::control (
         owner   => 'root',
         group   => 'root',
         mode    => '0644',
+        notify  => Service['quantum-server']
+    }
+
+    file { '/etc/quantum/metadata_agent.ini':
+        ensure  => present,
+        require => Package['openstack-quantum'],
+        content => template('openstack/quantum/metadata_agent.ini.erb'),
+        owner   => 'root',
+        group   => 'quantum',
+        mode    => '0640',
         notify  => Service['quantum-server']
     }
 
@@ -702,6 +809,177 @@ class openstack::control (
         command     => "mysql -u root -e \"GRANT ALL PRIVILEGES ON quantum.* TO \'${quantum_user}\'@\'%\' IDENTIFIED BY \'${quantum_password}\'\"",
         refreshonly => true,
         subscribe   => Exec['set_privs_on_quantum_db_at_localhost']
+    }
+
+#networking stuff
+    exec { 'add_ovs_internal_bridge':
+        command => 'ovs-vsctl add-br br-int',
+        unless  => 'ovs-vsctl br-exists br-int',
+        require => File['/etc/quantum/plugin.ini']
+    }
+
+    exec { 'add_ovs_external_bridge':
+        command => 'ovs-vsctl add-br br-ex',
+        unless  => 'ovs-vsctl br-exists br-ex',
+        notify  => Exec["connect_ovs_bridge_to_${ext_network_interface}"],
+    }
+
+    exec { "connect_ovs_bridge_to_${ext_network_interface}":
+        command     => "ovs-vsctl add-port br-${ext_network_interface} br-ex",
+        refreshonly => true,
+        subscribe   => Exec['add_ovs_external_bridge'],
+    }
+
+#some files to make managing vlans through puppet easier
+    file { '/opt/admin/openstack':
+        ensure => directory,
+        owner  => 'root',
+        group  => 'root',
+        mode   => '0755'
+    }
+
+    file { '/opt/admin/openstack/add_default_route_for_subnet.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/add_default_route_for_subnet.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/default_route_create.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/default_route_create.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/default_route_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/default_route_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/ext_net_create.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/ext_net_create.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/ext_net_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/ext_net_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/floating_ips_create.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/floating_ips_create.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/floating_ips_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/floating_ips_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/router_gateway_set.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/router_gateway_set.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/router_gateway_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/router_gateway_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/subnet_create.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/subnet_create.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/subnet_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/subnet_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/verify_default_route_for_subnet.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/verify_default_route_for_subnet.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/vlan_create.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/vlan_create.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/vlan_verify.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/vlan_verify.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/glance_add_image.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/glance_add_image.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
+    }
+
+    file { '/opt/admin/openstack/glance_verify_image.sh':
+        ensure  => present,
+        content => template('openstack/admin_scripts/glance_verify_image.sh.erb'),
+        owner   => 'root',
+        group   => 'root',
+        mode    => '0755',
+        require => File['/opt/admin/openstack']
     }
 
 }

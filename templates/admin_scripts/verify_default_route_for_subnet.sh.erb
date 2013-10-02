@@ -1,5 +1,8 @@
+#!/bin/bash
 # THIS FILE IS MANAGED BY PUPPET
 # <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+
+# $1 - name of the subnet
 
 export OS_TENANT_NAME=<%= admin_tenant_name %>
 export OS_USERNAME=<%= admin_user %>
@@ -7,3 +10,7 @@ export OS_PASSWORD=<%= admin_password %>
 export OS_AUTH_URL="http://<%= auth_host %>:5000/v2.0/"
 export SERVICE_ENDPOINT="http://<%= auth_host %>:35357/v2.0"
 export SERVICE_TOKEN=<%= admin_password %>
+
+subnet_id=$(/usr/bin/quantum subnet-show $1 -F id -f shell | grep "id=" | cut -d'"' -f2)
+
+/usr/bin/quantum router-port-list default_router_for_$1 -f csv | grep -q $subnet_id

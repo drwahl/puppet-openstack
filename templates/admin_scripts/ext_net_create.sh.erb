@@ -1,5 +1,9 @@
+#!/bin/bash
 # THIS FILE IS MANAGED BY PUPPET
 # <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+
+# $1 - external network name
+# $2 - external network interface
 
 export OS_TENANT_NAME=<%= admin_tenant_name %>
 export OS_USERNAME=<%= admin_user %>
@@ -7,3 +11,5 @@ export OS_PASSWORD=<%= admin_password %>
 export OS_AUTH_URL="http://<%= auth_host %>:5000/v2.0/"
 export SERVICE_ENDPOINT="http://<%= auth_host %>:35357/v2.0"
 export SERVICE_TOKEN=<%= admin_password %>
+
+/usr/bin/quantum net-create $1 --provider:physical_network $2 --provider:network_type vlan --provider:segmentation_id 1 --router:external=True

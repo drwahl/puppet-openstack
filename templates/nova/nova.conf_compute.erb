@@ -12,7 +12,9 @@ force_dhcp_release = True
 injected_network_template = /usr/share/nova/interfaces.template
 libvirt_nonblocking = True
 libvirt_inject_partition = -1
-network_manager = nova.network.manager.FlatDHCPManager
+network_manager = nova.network.manager.VlanManager
+vlan_interface = <%= vlan_interface %>
+fixed_range = ''
 iscsi_helper = tgtadm
 sql_connection = mysql://<%= nova_user %>:<%= nova_password %>@<%= auth_host %>/nova
 compute_driver = libvirt.LibvirtDriver

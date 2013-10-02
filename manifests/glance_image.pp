@@ -9,13 +9,13 @@ define openstack::glance_image (
 
     exec { "retrieve_${name}":
         command => "wget ${source} -O \"/var/lib/glance/${name}.img\"",
-        unless  => "glance image-show \"${name}\" > /dev/null",
+        unless  => "/opt/admin/openstack/glance_verify_image.sh \"${name}\"",
         notify  => Exec["add_image_${name}"],
         cwd     => '/var/lib/glance/'
     }
 
     exec { "add_image_${name}":
-        command     => "glance image-create --is-public ${is_public} --disk-format ${disk_format} --container-format ${container_format} --name \"${name}\" < \"/var/lib/glance/${name}.img\"",
+        command     => "/opt/admin/openstack/glance_add_image.sh ${is_public} ${disk_format} ${container_format} \"${name}\"",
         refreshonly => true,
         cwd         => '/var/lib/glance/',
     }

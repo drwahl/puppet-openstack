@@ -6,7 +6,6 @@
 ADMIN_EMAIL="nsi@classmates.com"
 ADMIN_PASSWORD=<%= admin_password %>
 SERVICE_PASSWORD=${SERVICE_PASSWORD:-$ADMIN_PASSWORD}
-DEMO_PASSWORD=${DEMO_PASSWORD:-$ADMIN_PASSWORD}
 export OS_SERVICE_TOKEN="<%= admin_password %>"
 export OS_SERVICE_ENDPOINT="http://localhost:35357/v2.0"
 SERVICE_TENANT_NAME=${SERVICE_TENANT_NAME:-service}
@@ -17,7 +16,7 @@ MYSQL_HOST=localhost
 MYSQL_PASSWORD=keystone
 #
 KEYSTONE_REGION=RegionOne
-KEYSTONE_HOST=<%= ipaddress %>
+KEYSTONE_HOST=<%= ipaddress_eth0 %>
 
 # Shortcut function to get a newly generated ID
 function get_field() {
@@ -32,13 +31,15 @@ function get_field() {
 }
 
 # Tenants
+PROD_TENANT=$(keystone tenant-create --name=prod | grep " id " | get_field 2)
+QA_TENANT=$(keystone tenant-create --name=qa | grep " id " | get_field 2)
+DEV_TENANT=$(keystone tenant-create --name=dev | grep " id " | get_field 2)
+DR_TENANT=$(keystone tenant-create --name=dr | grep " id " | get_field 2)
 ADMIN_TENANT=$(keystone tenant-create --name=admin | grep " id " | get_field 2)
-DEMO_TENANT=$(keystone tenant-create --name=demo | grep " id " | get_field 2)
 SERVICE_TENANT=$(keystone tenant-create --name=$SERVICE_TENANT_NAME | grep " id " | get_field 2)
 
 # Users
 ADMIN_USER=$(keystone user-create --name=admin --pass="$ADMIN_PASSWORD" --email="$ADMIN_EMAIL" | grep " id " | get_field 2)
-DEMO_USER=$(keystone user-create --name=demo --pass="$DEMO_PASSWORD" --email="$ADMIN_EMAIL" --tenant-id=$DEMO_TENANT | grep " id " | get_field 2)
 NOVA_USER=$(keystone user-create --name=nova --pass="<%= nova_password %>" --tenant-id $SERVICE_TENANT --email="$ADMIN_EMAIL" | grep " id " | get_field 2)
 GLANCE_USER=$(keystone user-create --name=glance --pass="<%= glance_password %>" --tenant-id $SERVICE_TENANT --email="$ADMIN_EMAIL" | grep " id " | get_field 2)
 QUANTUM_USER=$(keystone user-create --name=quantum --pass="<%= quantum_password %>" --tenant-id $SERVICE_TENANT --email="$ADMIN_EMAIL" | grep " id " | get_field 2)
@@ -54,7 +55,6 @@ keystone user-role-add --tenant-id $SERVICE_TENANT --user-id $NOVA_USER --role-i
 keystone user-role-add --tenant-id $SERVICE_TENANT --user-id $GLANCE_USER --role-id $ADMIN_ROLE
 keystone user-role-add --tenant-id $SERVICE_TENANT --user-id $QUANTUM_USER --role-id $ADMIN_ROLE
 keystone user-role-add --tenant-id $SERVICE_TENANT --user-id $CINDER_USER --role-id $ADMIN_ROLE
-keystone user-role-add --tenant-id $DEMO_TENANT --user-id $DEMO_USER --role-id $MEMBER_ROLE
 
 # Create services
 COMPUTE_SERVICE=$(keystone service-create --name nova --type compute --description 'OpenStack Compute Service' | grep " id " | get_field 2)

@@ -1,5 +1,12 @@
+#!/bin/bash
 # THIS FILE IS MANAGED BY PUPPET
 # <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+
+# $1 - id of the tenant this will effect
+# $2 - name of the network being created
+# $3 - CIDR notation network range for this subnet
+# $4 - name of this subnet
+# $5 - DNS server to apply to this subnet
 
 export OS_TENANT_NAME=<%= admin_tenant_name %>
 export OS_USERNAME=<%= admin_user %>
@@ -7,3 +14,5 @@ export OS_PASSWORD=<%= admin_password %>
 export OS_AUTH_URL="http://<%= auth_host %>:5000/v2.0/"
 export SERVICE_ENDPOINT="http://<%= auth_host %>:35357/v2.0"
 export SERVICE_TOKEN=<%= admin_password %>
+
+/usr/bin/quantum subnet-create --tenant-id $1 $2 $3 --name $4 --dns-nameserver $5

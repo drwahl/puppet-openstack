@@ -25,6 +25,7 @@ core_plugin = quantum.plugins.openvswitch.ovs_quantum_plugin.OVSQuantumPluginV2
 auth_strategy = keystone
 fake_rabbit = False
 rpc_backend=quantum.openstack.common.rpc.impl_qpid
+qpid_hostname = <%= auth_host %>
 qpid_username = guest
 qpid_password = guest
 

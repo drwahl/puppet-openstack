@@ -1,5 +1,11 @@
+#!/bin/bash
 # THIS FILE IS MANAGED BY PUPPET
 # <%= file.split(File::SEPARATOR)[5..-1].join(File::SEPARATOR) %>
+
+# $1 - id of the tenant this will effect
+# $2 - name of the network being created
+# $3 - name of the interface that will be servicing this traffic
+# $4 - vlan tag to apply to all packets on this network
 
 export OS_TENANT_NAME=<%= admin_tenant_name %>
 export OS_USERNAME=<%= admin_user %>
@@ -7,3 +13,5 @@ export OS_PASSWORD=<%= admin_password %>
 export OS_AUTH_URL="http://<%= auth_host %>:5000/v2.0/"
 export SERVICE_ENDPOINT="http://<%= auth_host %>:35357/v2.0"
 export SERVICE_TOKEN=<%= admin_password %>
+
+/usr/bin/quantum net-create --tenant-id $1 $2 --provider:network_type vlan --provider:physical_network $3 --provider:segmentation_id $4
